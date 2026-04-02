@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "yugioh-rulings": {
+      "command": "node",
+      "args": [
+        "REPLACE_WITH_ABSOLUTE_PATH/yugioh-mcp-server/src/index.js"
+      ],
+      "env": {}
+    }
+  }
+}

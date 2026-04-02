@@ -1,0 +1,20 @@
+{
+  "name": "yugioh-mcp-server",
+  "version": "1.0.0",
+  "description": "Yu-Gi-Oh! OCG/TCG MCP Server — deterministic PSCT parser, card database, and ruling engine for Claude Desktop",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "yugioh-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/test-parser.js"
+  },
+  "keywords": ["yugioh", "mcp", "psct", "rulings", "claude"],
+  "author": "Lars",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}
