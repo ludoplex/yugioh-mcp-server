@@ -113,10 +113,88 @@ function splitIntoEffects(text) {
   const numbered = text.split(/(?=\(\d+\)\s*)/).filter(s => s.trim());
   if (numbered.length > 1) return numbered;
   // Handle line-break separated (pendulum effects, etc.)
-  const lines = text.split(/\n/).filter(s => s.trim());
-  if (lines.length > 1) return lines;
-  // Single effect
-  return [text];
+  const lines = text.split(/\r?\n/).filter(s => s.trim());
+  if (lines.length > 1) {
+    // Each line may still contain multiple effects — recursively split each line
+    const allEffects = [];
+    for (const line of lines) {
+      allEffects.push(...splitSentenceEffects(line));
+    }
+    return allEffects;
+  }
+  // Single paragraph — split on sentence boundaries that start new effects
+  return splitSentenceEffects(text);
+}
+
+/**
+ * Split a single paragraph into separate effects at sentence boundaries.
+ * Looks for ". If ", ". When ", ". You can only use ", ". Once per turn, ",
+ * ". During ", ". At the start ", ". At the end " etc.
+ *
+ * Must NOT split inside quoted card names like "Card Name".
+ * Must NOT split on ". " inside parenthetical text.
+ */
+function splitSentenceEffects(text) {
+  if (!text || text.length < 20) return [text];
+
+  // Regex: split at ". " followed by a PSCT effect-start keyword
+  // Uses lookbehind for the period and lookahead for the keyword
+  // We manually walk the string to respect quotes and parentheses
+  const effects = [];
+  let current = "";
+  let i = 0;
+  let inQuote = false;
+  let depth = 0;
+
+  while (i < text.length) {
+    const c = text[i];
+
+    // Track quotes (straight and curly)
+    if (c === '"' || c === '\u201C' || c === '\u201D') {
+      inQuote = !inQuote;
+      current += c;
+      i++;
+      continue;
+    }
+
+    // Track parentheses/brackets depth
+    if (!inQuote) {
+      if (c === '(' || c === '[') depth++;
+      if (c === ')' || c === ']') depth--;
+    }
+
+    // Only split at top-level (not inside quotes or parens)
+    if (c === '.' && !inQuote && depth <= 0) {
+      // Check if this period is followed by a space + effect-start keyword
+      const rest = text.substring(i + 1);
+      const effectStartMatch = rest.match(
+        /^\s+(If |When |You can only |Once per turn|During |At the start |At the end |Each time |This card )/
+      );
+
+      if (effectStartMatch) {
+        // Check this isn't a card-name abbreviation or abbreviation like "e.g."
+        // Heuristic: the current clause should be at least 15 chars (real effect text)
+        const trimmed = current.trim();
+        if (trimmed.length >= 15) {
+          effects.push(trimmed + ".");
+          current = "";
+          i++; // skip the period
+          // skip whitespace after period
+          while (i < text.length && /\s/.test(text[i])) i++;
+          continue;
+        }
+      }
+    }
+
+    current += c;
+    i++;
+  }
+
+  if (current.trim()) {
+    effects.push(current.trim());
+  }
+
+  return effects.length > 0 ? effects : [text];
 }
 
 function parseSingleEffect(text, cardType) {
